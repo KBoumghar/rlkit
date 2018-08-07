@@ -131,7 +131,7 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
                 save_itrs=True,
         ):
             self._start_epoch(epoch)
-            for _ in range(self.num_env_steps_per_epoch):
+            for _s_ in range(self.num_env_steps_per_epoch):
                 action, agent_info = self._get_action_and_info(
                     observation,
                 )

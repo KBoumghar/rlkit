@@ -139,6 +139,7 @@ class SoftActorCritic(TorchRLAlgorithm):
             Eval should set this to None.
             This way, these statistics are only computed for one batch.
             """
+            print(actions)
             self.eval_statistics = OrderedDict()
             self.eval_statistics['QF Loss'] = np.mean(ptu.get_numpy(qf_loss))
             self.eval_statistics['VF Loss'] = np.mean(ptu.get_numpy(vf_loss))

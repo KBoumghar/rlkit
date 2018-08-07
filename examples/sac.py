@@ -4,7 +4,7 @@ Run PyTorch Soft Actor Critic on HalfCheetahEnv.
 NOTE: You need PyTorch 0.3 or more (to have torch.distributions)
 """
 import numpy as np
-from gym.envs.mujoco import HalfCheetahEnv
+from gym.envs.mujoco import HalfCheetahEnv, PointmassEnv
 
 import rlkit.torch.pytorch_util as ptu
 from rlkit.envs.wrappers import NormalizedBoxEnv
@@ -12,13 +12,13 @@ from rlkit.launchers.launcher_util import setup_logger
 from rlkit.torch.sac.policies import TanhGaussianPolicy
 from rlkit.torch.sac.sac import SoftActorCritic
 from rlkit.torch.networks import FlattenMlp
-
+import gym
 
 def experiment(variant):
-    env = NormalizedBoxEnv(HalfCheetahEnv())
+    #env = NormalizedBoxEnv(HalfCheetahEnv())
     # Or for a specific version:
     # import gym
-    # env = NormalizedBoxEnv(gym.make('HalfCheetah-v1'))
+    env = NormalizedBoxEnv(gym.make('Pointmass-v1'))
 
     obs_dim = int(np.prod(env.observation_space.shape))
     action_dim = int(np.prod(env.action_space.shape))

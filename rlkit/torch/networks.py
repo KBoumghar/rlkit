@@ -6,6 +6,7 @@ Algorithm-specific networks should go else-where.
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
+from torch.autograd import Variable
 
 from rlkit.policies.base import Policy
 from rlkit.torch import pytorch_util as ptu
@@ -65,6 +66,7 @@ class Mlp(PyTorchModule):
         self.last_fc.bias.data.uniform_(-init_w, init_w)
 
     def forward(self, input, return_preactivations=False):
+        import pdb; pdb.set_trace()
         h = input
         for i, fc in enumerate(self.fcs):
             h = fc(h)
@@ -77,6 +79,94 @@ class Mlp(PyTorchModule):
             return output, preactivation
         else:
             return output
+
+class ObjectMlp(PyTorchModule):
+    def __init__(
+            self,
+            hidden_sizes,
+            output_size,
+            input_size,
+            init_w=3e-3,
+            hidden_activation=F.relu,
+            output_activation=identity,
+            hidden_init=ptu.fanin_init,
+            b_init_value=0.1,
+            layer_norm=False,
+            layer_norm_kwargs=None,
+            index_to_object=[0,0,0,0,1,1,2,2,3,3],
+            objects=['agent', 'target', 'enemy', 'enemy'],
+    ):
+        self.save_init_params(locals())
+        super().__init__()
+
+        if layer_norm_kwargs is None:
+            layer_norm_kwargs = dict()
+        self.TARGET = Variable(torch.FloatTensor([[1.,0.]]), requires_grad=False)
+        self.ENEMY =  Variable(torch.FloatTensor([[0.,1.]]), requires_grad=False)
+        self.input_size = input_size
+        self.output_size = output_size
+        self.hidden_activation = hidden_activation
+        self.output_activation = output_activation
+        self.layer_norm = layer_norm
+        self.fcs = []
+        self.layer_norms = []
+        in_size = input_size
+        assert(input_size == len(index_to_object))
+        self.index_to_object = index_to_object
+        self.objects = objects
+
+        def mlp(layer_sizes, scope):
+            in_size = layer_sizes[0]
+            layers = []
+            for i, next_size in enumerate(layer_sizes[1:]):
+                fc = nn.Linear(in_size, next_size)
+                in_size = next_size
+                hidden_init(fc.weight)
+                fc.bias.data.fill_(b_init_value)
+                layers.append(fc)
+                self.__setattr__(scope+"fc{}".format(i), fc)
+            return layers
+
+        self.affordance_mlp = mlp([2,20], 'affordance')
+        self.weight_mlp = mlp([4, 10,1], 'weight')
+        self.translator_mlp = mlp([20+4+2, 10,10, output_size], 'translator')
+
+        # self.last_fc = nn.Linear(in_size, output_size)
+        # self.last_fc.weight.data.uniform_(-init_w, init_w)
+        # self.last_fc.bias.data.uniform_(-init_w, init_w)
+    def _run_mlp(self, input, mlp, activation, last_activation):
+        h = input
+        for i, fc in enumerate(mlp[:-1]):
+            h = fc(h)
+            if self.layer_norm and i < len(self.fcs) - 1:
+                h = self.layer_norms[i](h)
+            h = activation(h)
+        preactivation = mlp[-1](h)
+        output = last_activation(preactivation)
+        return output
+
+    def _apply_translator(self, agent, obj, affordance):
+        input = torch.cat((agent, obj, affordance), dim=1)
+        p_a = self._run_mlp(input, self.translator_mlp, F.relu, identity)
+        return p_a
+
+    def forward(self, input, return_preactivations=False):
+        agent = input[:,:4]
+        target = input[:, 4:6]
+        enemy_1 = input[:, 6:8]
+        enemy_2 = input[:, 8:10]
+        batch = input.shape[0]
+        TARGET = self.TARGET.expand((batch,2))
+        ENEMY = self.ENEMY.expand((batch,2))
+        target_aff = self._run_mlp(TARGET, self.affordance_mlp, F.relu, identity)
+        #print("target_aff", target_aff)
+        #import pdb; pdb.set_trace()
+        enemy_aff = self._run_mlp(ENEMY, self.affordance_mlp, F.relu, identity)
+        actions = [self._apply_translator(agent, target, target_aff),
+                   self._apply_translator(agent, enemy_1, enemy_aff),
+                   self._apply_translator(agent, enemy_2, enemy_aff)]
+        final_action = sum(actions)
+        return final_action
 
 
 class FlattenMlp(Mlp):
