@@ -166,6 +166,15 @@ class ObjectMlp(PyTorchModule):
                    self._apply_translator(agent, enemy_1, enemy_aff),
                    self._apply_translator(agent, enemy_2, enemy_aff)]
         final_action = sum(actions)
+
+        p_a = [F.softmax(a, dim=1) for a in actions]
+        p_a_tot = F.softmax(final_action, dim=1)
+        max, indices = p_a_tot.data.max(dim=1)
+        self.weights = [float(p[0, int(indices[0])]) for p in p_a]
+        #print(self.weights)
+        self.p_a_tot = p_a_tot.data.numpy()
+        #self.myactions = actions.data.numpy()
+        #import pdb; pdb.set_trace()
         return final_action
 
 

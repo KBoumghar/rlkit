@@ -42,6 +42,7 @@ class DQN(TorchRLAlgorithm):
         :param epsilon: Probability of taking a random action.
         :param kwargs: kwargs to pass onto TorchRLAlgorithm
         """
+        import pdb; pdb.set_trace()
         exploration_strategy = EpsilonGreedy(
             action_space=env.action_space,
             prob_random_action=epsilon,
