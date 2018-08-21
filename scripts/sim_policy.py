@@ -12,6 +12,7 @@ filename = str(uuid.uuid4())
 def simulate_policy(args):
     data = joblib.load(args.file)
     policy = data['policy']
+    import pdb; pdb.set_trace()
     env = data['env']
     print("Policy loaded")
     if args.gpu:

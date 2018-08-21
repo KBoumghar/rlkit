@@ -1,5 +1,5 @@
 import numpy as np
-
+TEST=False
 
 def rollout(env, agent, max_path_length=np.inf, animated=False):
     """
@@ -33,17 +33,19 @@ def rollout(env, agent, max_path_length=np.inf, animated=False):
     path_length = 0
     if animated:
         env.render()
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     num = str(np.random.rand(1)[0])[1:3]
-    env.env.log_filename = '/home/coline/test/Research2018/results/numpy/object'+num+'.npy'
-    filename_w ='/home/coline/test/Research2018/results/numpy/object'+num+'weights.npy'
-    filename_a ='/home/coline/test/Research2018/results/numpy/object'+num+'actions.npy'
+    if TEST:
+        env.env.log_filename = '/home/coline/test/Research2018/results/numpy/object'+num+'.npy'
+        filename_w ='/home/coline/test/Research2018/results/numpy/object'+num+'weights.npy'
+        filename_a ='/home/coline/test/Research2018/results/numpy/object'+num+'actions.npy'
     ws = []
     p_as = []
     while path_length < max_path_length:
         a, agent_info = agent.get_action(o)
-        ws.append( agent.qf.weights.copy())
-        p_as.append(agent.qf.p_a_tot.copy())
+        if TEST:
+            ws.append( agent.qf.weights.copy())
+            p_as.append(agent.qf.p_a_tot.copy())
 
         next_o, r, d, env_info = env.step(a)
         observations.append(o)
@@ -58,8 +60,9 @@ def rollout(env, agent, max_path_length=np.inf, animated=False):
         o = next_o
         if animated:
             env.render()
-    np.save(filename_w, ws)
-    np.save(filename_a, p_as)
+    if TEST:
+        np.save(filename_w, ws)
+        np.save(filename_a, p_as)
     actions = np.array(actions)
     if len(actions.shape) == 1:
         actions = np.expand_dims(actions, 1)
