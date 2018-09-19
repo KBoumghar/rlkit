@@ -1,5 +1,6 @@
 import numpy as np
 TEST=False
+TEST=True
 
 def rollout(env, agent, max_path_length=np.inf, animated=False):
     """
@@ -36,9 +37,9 @@ def rollout(env, agent, max_path_length=np.inf, animated=False):
     #import pdb; pdb.set_trace()
     num = str(np.random.rand(1)[0])[1:3]
     if TEST:
-        env.env.log_filename = '/home/coline/test/Research2018/results/numpy/object'+num+'.npy'
-        filename_w ='/home/coline/test/Research2018/results/numpy/object'+num+'weights.npy'
-        filename_a ='/home/coline/test/Research2018/results/numpy/object'+num+'actions.npy'
+        env.env.log_filename = '/home/coline/test/Research2018/results/numpy/fullobject'+num+'.npy'
+        filename_w ='/home/coline/test/Research2018/results/numpy/fullobject'+num+'weights.npy'
+        filename_a ='/home/coline/test/Research2018/results/numpy/fullobject'+num+'actions.npy'
     ws = []
     p_as = []
     while path_length < max_path_length:

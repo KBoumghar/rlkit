@@ -147,6 +147,9 @@ def fanin_init(tensor):
     bound = 1. / np.sqrt(fan_in)
     return tensor.uniform_(-bound, bound)
 
+def zeros_init(tensor):
+    return fanin_init(tensor)*0.0
+
 
 def fanin_init_weights_like(tensor):
     if isinstance(tensor, TorchVariable):

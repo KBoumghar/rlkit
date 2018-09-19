@@ -230,7 +230,7 @@ class ObjectMlp(PyTorchModule):
         p_a_tot = F.softmax(final_action, dim=1)
         max, indices = p_a_tot.data.max(dim=1)
         self.weights = [float(p[0, int(indices[0])]) for p in p_a]
-        #print(self.weights)
+        print(self.weights)
         self.p_a_tot = p_a_tot.data.numpy()
         #self.myactions = actions.data.numpy()
         #import pdb; pdb.set_trace()
@@ -280,13 +280,16 @@ class FullObjectMlp(PyTorchModule):
         self.fcs = []
         self.layer_norms = []
         in_size = input_size
-        def mlp(layer_sizes, scope):
+        def mlp(layer_sizes, scope, last_layer_init=None):
             in_size = layer_sizes[0]
             layers = []
             for i, next_size in enumerate(layer_sizes[1:]):
                 fc = nn.Linear(in_size, next_size)
                 in_size = next_size
-                hidden_init(fc.weight)
+                if i == len(layer_sizes[:1])-1 and last_layer_init is not None:
+                    last_layer_init(fc.weight)
+                else:
+                    hidden_init(fc.weight)
                 fc.bias.data.fill_(b_init_value)
                 layers.append(fc)
                 self.__setattr__(scope+"fc{}".format(i), fc)
@@ -295,7 +298,7 @@ class FullObjectMlp(PyTorchModule):
         self.affordance_mlp = mlp([num_classes,20,self.AFF_SIZE], 'affordance')
         self.weight_mlp = mlp([self.AGENT_SIZE+num_classes, 10,1], 'weight')
         self.translator_mlp = mlp([self.AFF_SIZE+self.AGENT_SIZE+2, 10,10, output_size], 'translator')
-        self.task_attention_mlp = mlp([self.num_tasks+self.AFF_SIZE, 10, 1], 'task_attention')
+        self.task_attention_mlp = mlp([self.num_tasks+num_classes+self.AGENT_SIZE, 10, 1,], 'task_attention', ptu.zeros_init)
         # self.last_fc = nn.Linear(in_size, output_size)
         # self.last_fc.weight.data.uniform_(-init_w, init_w)
         # self.last_fc.bias.data.uniform_(-init_w, init_w)
@@ -347,9 +350,10 @@ class FullObjectMlp(PyTorchModule):
         actions = []
         for obj, cls, cls_var in objects:
             actions.append(self._apply_translator(agent, obj, affordances[cls]))
-            weights.append(self._run_mlp( torch.cat((task_input, affordances[cls]), dim=1),
+            weights.append(self._run_mlp( torch.cat((task_input, cls_var, agent), dim=1),
                                           self.task_attention_mlp, F.relu, identity))
         weights_ = torch.cat(weights, dim=1)
+        #import pdb; pdb.set_trace()
         softweights = torch.unsqueeze(F.softmax(weights_, dim=1), dim=2)
         stacked_actions = torch.stack(actions, dim=1)
         weighted_actions = stacked_actions*softweights
@@ -359,8 +363,8 @@ class FullObjectMlp(PyTorchModule):
         p_a = [F.softmax(a, dim=1) for a in actions]
         p_a_tot = F.softmax(final_action, dim=1)
         max, indices = p_a_tot.data.max(dim=1)
-        self.weights = [float(p[0, int(indices[0])]) for p in p_a]
-        #print(self.weights)
+        self.weights = [float(w[0]) for w in softweights[0]]# [float(p[0, int(indices[0])]) for p in p_a]
+        # print(self.weights)
         self.p_a_tot = p_a_tot.data.numpy()
         #self.myactions = actions.data.numpy()
         #import pdb; pdb.set_trace()

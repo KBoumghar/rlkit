@@ -12,13 +12,13 @@ from rlkit.torch.dqn.dqn import DQN
 from rlkit.torch.networks import ObjectMlp, Mlp
 
 envName = 'DiscretePointmass-v1'
-
+envName = 'CartPole-v0'
 def experiment(variant):
     env = gym.make(envName)
     
     training_env = gym.make(envName)
 
-    qf = ObjectMlp(
+    qf = Mlp(
         hidden_sizes=[32, 32],
         input_size=int(np.prod(env.observation_space.shape)),
         output_size=env.action_space.n,
