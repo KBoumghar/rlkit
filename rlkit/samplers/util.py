@@ -1,6 +1,5 @@
 import numpy as np
 TEST=False
-TEST=True
 
 def rollout(env, agent, max_path_length=np.inf, animated=False):
     """
