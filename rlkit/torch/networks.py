@@ -12,7 +12,7 @@ from rlkit.torch import pytorch_util as ptu
 from rlkit.torch.core import PyTorchModule
 from rlkit.torch.data_management.normalizer import TorchFixedNormalizer
 from rlkit.torch.modules import LayerNorm
-
+from rlkit.torch.conv_networks import ConvNet
 
 def identity(x):
     return x
@@ -66,7 +66,10 @@ class Mlp(PyTorchModule):
 
     def forward(self, input, return_preactivations=False):
         h = input
+        #print("input", input.shape)
         for i, fc in enumerate(self.fcs):
+            #print("fc i", i, fc)
+            
             h = fc(h)
             if self.layer_norm and i < len(self.fcs) - 1:
                 h = self.layer_norms[i](h)
@@ -77,6 +80,22 @@ class Mlp(PyTorchModule):
             return output, preactivation
         else:
             return output
+
+
+class ObjectMlp(Mlp):
+    def forward(self, inputs, return_preactivations=False):
+        outputs = []
+        shape = inputs.shape
+        inputs = inputs.view((-1,10))
+        #import pdb; pdb.set_trace()
+        outputs = super().forward(inputs, return_preactivations=False)
+        dA =outputs.shape[1]
+        outputs = outputs.view((shape[0], shape[1], dA))
+        #import pdb; pdb.set_trace()
+        output = torch.sum(outputs, dim=1)
+        if return_preactivations:
+            return output, output
+        return output
 
 
 class FlattenMlp(Mlp):

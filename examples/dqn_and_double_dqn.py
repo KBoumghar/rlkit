@@ -1,7 +1,9 @@
 """
 Run DQN on grid world.
 """
-
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 import gym
 import numpy as np
 from torch import nn as nn
@@ -9,16 +11,20 @@ from torch import nn as nn
 import rlkit.torch.pytorch_util as ptu
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.torch.dqn.dqn import DQN
-from rlkit.torch.networks import Mlp
-
+from rlkit.torch.networks import Mlp, ConvNet, ObjectMlp, FlattenMlp
+from wrappers.atari_wrappers import Detector
 
 def experiment(variant):
-    env = gym.make('CartPole-v0')
-    training_env = gym.make('CartPole-v0')
+    env = Detector(gym.make('RiverraidDeterministic-v4'))
+    import pdb; pdb.set_trace()
+    env.reset()
+    training_env =  Detector(gym.make('RiverraidDeterministic-v4'))
 
-    qf = Mlp(
+    input_size = env.num_templates +4
+    #import pdb; pdb.set_trace()
+    qf = ObjectMlp(
         hidden_sizes=[32, 32],
-        input_size=int(np.prod(env.observation_space.shape)),
+        input_size= input_size,#int(np.prod(env.observation_space.shape)),
         output_size=env.action_space.n,
     )
     qf_criterion = nn.MSELoss()
