@@ -16,11 +16,11 @@ from wrappers.atari_wrappers import Detector
 
 def experiment(variant):
     env = Detector(gym.make('RiverraidDeterministic-v4'))
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     env.reset()
     training_env =  Detector(gym.make('RiverraidDeterministic-v4'))
 
-    input_size = env.num_templates +4
+    input_size = env.num_templates +4+1
     #import pdb; pdb.set_trace()
     qf = ObjectMlp(
         hidden_sizes=[32, 32],

@@ -83,14 +83,28 @@ class Mlp(PyTorchModule):
 
 
 class ObjectMlp(Mlp):
+
+    def __init__(
+            self,
+            *args,
+            max_objects=10,
+            **kwargs
+    ):
+        self.save_init_params(locals())
+        super().__init__(*args, **kwargs)
+        self.max_objects = max_objects
+    
     def forward(self, inputs, return_preactivations=False):
         outputs = []
-        shape = inputs.shape
-        inputs = inputs.view((-1,10))
-        #import pdb; pdb.set_trace()
+        shape = inputs.shape 
+        inputs = inputs.view((-1,self.input_size))
+        valid = inputs[:, -1]
+        valid = valid.unsqueeze(1)
         outputs = super().forward(inputs, return_preactivations=False)
+        #import pdb; pdb.set_trace()
+        valid_outputs = outputs*valid
         dA =outputs.shape[1]
-        outputs = outputs.view((shape[0], shape[1], dA))
+        outputs = valid_outputs.view((shape[0], self.max_objects, dA))
         #import pdb; pdb.set_trace()
         output = torch.sum(outputs, dim=1)
         if return_preactivations:
