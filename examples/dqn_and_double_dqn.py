@@ -48,15 +48,15 @@ if __name__ == "__main__":
         algo_params=dict(
             num_epochs=500,
             num_steps_per_epoch=1000,
-            num_steps_per_eval=1000,
+            num_steps_per_eval=100,
             batch_size=128,
-            max_path_length=200,
+            max_path_length=20000,
             discount=0.99,
             epsilon=0.2,
             tau=0.001,
             hard_update_period=1000,
-            save_environment=False,  # Can't serialize CartPole for some reason
+            save_environment=True,  # Can't serialize CartPole for some reason
         ),
     )
-    setup_logger('name-of-experiment', variant=variant)
+    setup_logger('riverraid', variant=variant)
     experiment(variant)

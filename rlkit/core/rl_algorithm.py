@@ -178,12 +178,16 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
     def _try_to_eval(self, epoch):
         logger.save_extra_data(self.get_extra_data_to_save(epoch))
         if self._can_evaluate():
+            print("Evaluating")
             self.evaluate(epoch)
 
             params = self.get_epoch_snapshot(epoch)
             logger.save_itr_params(epoch, params)
             table_keys = logger.get_table_key_set()
             if self._old_table_keys is not None:
+                if table_keys != self._old_table_keys:
+                    print("old_table_keys", self._old_table_keys)
+                    print("new table keys", table_keys)
                 assert table_keys == self._old_table_keys, (
                     "Table keys cannot change from iteration to iteration."
                 )
@@ -232,8 +236,11 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
 
         :return:
         """
+        print("self._exploration_paths", len(self._exploration_paths))
+        print(" self.replay_buffer.num_steps_can_sample()",  self.replay_buffer.num_steps_can_sample())
+        print("self.batch_size", self.batch_size)
         return (
-            len(self._exploration_paths) > 0
+            len(self._exploration_paths) > 1
             and self.replay_buffer.num_steps_can_sample() >= self.batch_size
         )
 
