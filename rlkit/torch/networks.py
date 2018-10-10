@@ -111,6 +111,86 @@ class ObjectMlp(Mlp):
             return output, output
         return output
 
+class RelationalObjectMlp(Mlp):
+
+    def __init__(
+            self,
+            *args,
+            max_objects=10,
+            **kwargs
+    ):
+        self.save_init_params(locals())
+        super().__init__(*args, **kwargs)
+        self.max_objects = max_objects
+        hidden_init=ptu.fanin_init
+        b_init_value=0.1
+        def mlp(layer_sizes, scope, last_layer_init=None):
+            in_size = layer_sizes[0]
+            layers = []
+            for i, next_size in enumerate(layer_sizes[1:]):
+                fc = nn.Linear(in_size, next_size)
+                in_size = next_size
+                if i == len(layer_sizes[:1])-1 and last_layer_init is not None:
+                    last_layer_init(fc.weight)
+                else:
+                    hidden_init(fc.weight)
+                fc.bias.data.fill_(b_init_value)
+                layers.append(fc)
+                self.__setattr__(scope+"fc{}".format(i), fc)
+            return layers
+        self.key_query_mlp = mlp([self.input_size, 32,20], 'key')
+        self.embedding_mlp = mlp([self.input_size, 32,self.input_size] , 'embedding')
+        self.action_mlp = mlp([self.input_size*2, 32, self.output_size], 'action')
+    def _run_mlp(self, input, mlp, activation, last_activation):
+        h = input
+        for i, fc in enumerate(mlp[:-1]):
+            h = fc(h)
+            if self.layer_norm and i < len(self.fcs) - 1:
+                h = self.layer_norms[i](h)
+            h = activation(h)
+        preactivation = mlp[-1](h)
+        output = last_activation(preactivation)
+        return output
+    
+    def forward(self, inputs, return_preactivations=False):
+        outputs = []
+        shape = inputs.shape 
+        inputs = inputs.view((-1,self.input_size))
+        valid = inputs[:, -1]
+        valid = valid.unsqueeze(1)
+        key_queries = self._run_mlp(inputs, self.key_query_mlp, F.relu, F.softmax)
+        keys = (key_queries[:, :10]*valid).view((shape[0], self.max_objects, 10))
+        queries = (key_queries[:, 10:]*valid).view((shape[0], self.max_objects, 10)).permute(0,2,1)
+        weights = torch.bmm(keys, queries)
+        values = (self._run_mlp(inputs, self.embedding_mlp, F.relu, identity)).view(shape[0], self.max_objects, self.input_size)
+        total_actions = []# torch.zeros(shape[0], self.output_size)
+        #import pdb; pdb.set_trace()
+        # if shape[0] > 1:
+        #     import pdb; pdb.set_trace()
+        for i in range(self.max_objects):
+            for k in range(self.max_objects):
+                 flat = torch.cat((values[:, i], values[:, k]), dim=1)
+                 w = (weights[:, i,k]).unsqueeze(1)
+                 actions = self._run_mlp(flat, self.action_mlp,F.relu, identity)*w
+                 total_actions.append(actions)
+        
+        #outputs = super().forward(inputs, return_preactivations=False)
+        #import pdb; pdb.set_trace()
+        #valid_outputs = outputs*valid
+        #dA =outputs.shape[1]
+        #outputs = valid_outputs.view((shape[0], self.max_objects, dA))
+        #import pdb; pdb.set_trace()
+        #output = torch.sum(outputs, dim=1)
+        output = sum(total_actions)
+        self.my_actions = output.data.numpy()#[ta.data.numpy() for ta in total_actions]
+        self.my_inputs = inputs.data.numpy()
+        self.my_weights = weights.data.numpy()
+        if return_preactivations:
+            return output, output
+        return output
+
+
+    
 
 class FlattenMlp(Mlp):
     """

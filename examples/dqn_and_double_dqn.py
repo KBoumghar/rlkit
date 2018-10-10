@@ -11,7 +11,7 @@ from torch import nn as nn
 import rlkit.torch.pytorch_util as ptu
 from rlkit.launchers.launcher_util import setup_logger
 from rlkit.torch.dqn.dqn import DQN
-from rlkit.torch.networks import Mlp, ConvNet, ObjectMlp, FlattenMlp
+from rlkit.torch.networks import Mlp, ConvNet, ObjectMlp, FlattenMlp, RelationalObjectMlp
 from wrappers.atari_wrappers import Detector
 
 def experiment(variant):
@@ -20,9 +20,9 @@ def experiment(variant):
     env.reset()
     training_env =  Detector(gym.make('RiverraidDeterministic-v4'))
 
-    input_size = env.num_templates +4+1
+    input_size = env.num_templates +2+1
     #import pdb; pdb.set_trace()
-    qf = ObjectMlp(
+    qf = RelationalObjectMlp(
         hidden_sizes=[32, 32],
         input_size= input_size,#int(np.prod(env.observation_space.shape)),
         output_size=env.action_space.n,
@@ -46,9 +46,9 @@ if __name__ == "__main__":
     # noinspection PyTypeChecker
     variant = dict(
         algo_params=dict(
-            num_epochs=500,
+            num_epochs=5000,
             num_steps_per_epoch=1000,
-            num_steps_per_eval=100,
+            num_steps_per_eval=300,
             batch_size=128,
             max_path_length=20000,
             discount=0.99,
@@ -58,5 +58,5 @@ if __name__ == "__main__":
             save_environment=True,  # Can't serialize CartPole for some reason
         ),
     )
-    setup_logger('riverraid', variant=variant)
+    setup_logger('riverraid-relational', variant=variant)
     experiment(variant)
