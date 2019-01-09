@@ -135,6 +135,7 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
         if start_epoch == 0:
             params = self.get_epoch_snapshot(-1)
             logger.save_itr_params(-1, params)
+        self.start_epoch = start_epoch
         self.training_mode(False)
         self._n_env_steps_total = start_epoch * self.num_env_steps_per_epoch
         gt.reset()
@@ -172,6 +173,65 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
             gt.stamp('eval')
             self._end_epoch(epoch)
 
+    def _collect_batched_episodes(self, num_steps):
+        num_steps =0
+        new_rollout = True
+        episode = []
+        while num_steps < num_steps:
+            if new_rollout: 
+                observation = self._start_new_rollout()
+                #episode.append(observation)
+            else:
+                action, agent_info = self._get_action_and_info(observation)
+            if self.render:
+                self.training_env.render()
+            next_ob, raw_reward, terminal, env_info = (
+                self.training_env.step(action)
+            )
+            episode.append((observation, action, reward, next_ob, terminal, agent_info, env_info))
+            self._n_env_steps_total += 1
+            num_steps+=1
+            reward = raw_reward * self.reward_scale
+            terminal = np.array([terminal])
+            reward = np.array([reward])
+            # self._handle_step(
+            #     observation,
+            #     action,
+            #     reward,
+            #     next_ob,
+            #     terminal,
+            #     agent_info=agent_info,
+            #     env_info=env_info,
+            # )
+            if terminal or len(self._current_path_builder) >= self.max_path_length:
+                self._get_rewards_for_episode(self, episode)
+                self._handle_rollout_ending()
+                new_observation = self._start_new_rollout()
+            else:
+                new_observation = next_ob
+            #return new_observation
+        return
+    
+    def _get_rewards_for_episode(self, episode):
+        observation_path = [timestep[0] for timestep in episode]
+        rewards = self.training_env.evaluate_episode(observation_path)
+        for i in range(len(episode)):
+            observation, action, reward, next_ob, terminal, agent_info, env_info = episode[i]
+            raw_reward = rewards[i]
+            reward = raw_reward * self.reward_scale
+            terminal = np.array([terminal])
+            reward = np.array([reward])
+            self._handle_step(
+                observation,
+                action,
+                reward,
+                next_ob,
+                terminal,
+                agent_info=agent_info,
+                env_info=env_info,
+            )
+        pass
+    
     def train_batch(self, start_epoch):
         self._current_path_builder = PathBuilder()
         observation = self._start_new_rollout()
@@ -185,6 +245,7 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
             # parallelize data collection, this would be the place to do it.
             for _ in range(self.num_env_steps_per_epoch):
                 observation = self._take_step_in_env(observation)
+            #self._collect_batched_episodes(self.num_env_steps_per_epoch)
             gt.stamp('sample')
 
             self._try_to_train()
@@ -262,7 +323,7 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
             times_itrs = gt.get_times().stamps.itrs
             train_time = times_itrs['train'][-1]
             sample_time = times_itrs['sample'][-1]
-            eval_time = times_itrs['eval'][-1] if epoch > 0 else 0
+            eval_time = times_itrs['eval'][-1] if epoch > self.start_epoch else 0
             epoch_time = train_time + sample_time + eval_time
             total_time = gt.get_times().total
 

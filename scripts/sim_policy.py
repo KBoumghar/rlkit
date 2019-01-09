@@ -20,6 +20,7 @@ def simulate_policy(args):
     if isinstance(policy, PyTorchModule):
         policy.train(False)
     while True:
+        print("rollout")
         path = rollout(
             env,
             policy,

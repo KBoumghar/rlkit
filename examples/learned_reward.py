@@ -14,11 +14,22 @@ from rlkit.launchers.launcher_util import setup_logger
 from rlkit.torch.dqn.dqn import DQN
 from rlkit.torch.networks import Mlp
 from gridworld.algorithms.models import Policy
+from gridworld.rewards.reward_functions import DeltaRewards
 from variant import VARIANT
+import torch
 
+device = torch.device("cuda")
+model_path = '/home/coline/affordance_world/affordance_world/agentcentric_model_2480056_epoch06.pt'
+state_dict, epoch, num_per_epoch , _= torch.load(model_path)
+delta_star = np.load('/home/coline/affordance_world/affordance_world/EatBreadPolicy_delta.npy')
+delta_star =  torch.from_numpy(delta_star).to(device)
+R = DeltaRewards(state_dict, device, trajectory=0, delta_m=1,delta_star=delta_star)
+reward_fn = R
 def experiment(variant):
-    env = gym.make('HammerWorld-EatBreadPolicy-v0')
-    training_env = gym.make('HammerWorld-EatBreadPolicy-v0')
+    env = gym.make('HammerWorld-PlaceholderReward-EatBreadPolicy-v0')
+    env.reward_function = reward_fn
+    training_env = gym.make('HammerWorld-PlaceholderReward-EatBreadPolicy-v0')
+    training_env.reward_function = reward_fn
     #import pdb; pdb.set_trace()
     qf = Policy(
         # hidden_sizes=[32, 32],
@@ -41,20 +52,6 @@ def experiment(variant):
 
 if __name__ == "__main__":
     # noinspection PyTypeChecker
-    variant = dict(
-        algo_params=dict(
-            num_epochs=500,
-            num_steps_per_epoch=1000,
-            num_steps_per_eval=1000,
-            batch_size=128,
-            max_path_length=200,
-            discount=0.90,
-            epsilon=0.2,
-            tau=0.002,
-            learning_rate=0.001,
-            hard_update_period=1000,
-            save_environment=True,  # Can't serialize CartPole for some reason
-        ),
-    )
-    setup_logger('oneobjeatbread_convfanin', variant=VARIANT)
+    VARIANT['algo_params']['replay_buffer_size']= 100000
+    setup_logger('eatbread-deltastar-model', variant=VARIANT)
     experiment(VARIANT)

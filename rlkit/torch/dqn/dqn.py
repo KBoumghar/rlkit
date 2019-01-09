@@ -27,6 +27,7 @@ class DQN(TorchRLAlgorithm):
             tau=0.001,
             epsilon=0.1,
             qf_criterion=None,
+            target_qf=None,
             **kwargs
     ):
         """
@@ -55,7 +56,10 @@ class DQN(TorchRLAlgorithm):
             env, exploration_policy, eval_policy=self.policy, **kwargs
         )
         self.qf = qf
-        self.target_qf = self.qf.copy()
+        if target_qf is None:
+            self.target_qf = self.qf.copy()
+        else:
+            self.target_qf = target_qf
         self.learning_rate = learning_rate
         self.use_hard_updates = use_hard_updates
         self.hard_update_period = hard_update_period
@@ -122,6 +126,9 @@ class DQN(TorchRLAlgorithm):
         snapshot.update(
             exploration_policy=self.exploration_policy,
             policy=self.policy,
+            optimizer_state=self.qf_optimizer.state_dict,
+            qf=self.qf,
+            target_qf=self.target_qf,
         )
         return snapshot
 
