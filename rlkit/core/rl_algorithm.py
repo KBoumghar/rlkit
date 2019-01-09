@@ -174,24 +174,26 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
             self._end_epoch(epoch)
 
     def _collect_batched_episodes(self, num_steps):
-        num_steps =0
+        num_steps_actual =0
         new_rollout = True
+        observation = self._start_new_rollout()
         episode = []
-        while num_steps < num_steps:
-            if new_rollout: 
-                observation = self._start_new_rollout()
+        while num_steps_actual < num_steps:
+            #if new_rollout: 
+            #    observation = self._start_new_rollout()
                 #episode.append(observation)
-            else:
-                action, agent_info = self._get_action_and_info(observation)
+            
+            action, agent_info = self._get_action_and_info(observation)
             if self.render:
                 self.training_env.render()
             next_ob, raw_reward, terminal, env_info = (
                 self.training_env.step(action)
             )
+            reward = raw_reward * self.reward_scale
             episode.append((observation, action, reward, next_ob, terminal, agent_info, env_info))
             self._n_env_steps_total += 1
-            num_steps+=1
-            reward = raw_reward * self.reward_scale
+            num_steps_actual +=1
+            
             terminal = np.array([terminal])
             reward = np.array([reward])
             # self._handle_step(
@@ -203,12 +205,12 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
             #     agent_info=agent_info,
             #     env_info=env_info,
             # )
-            if terminal or len(self._current_path_builder) >= self.max_path_length:
-                self._get_rewards_for_episode(self, episode)
+            if terminal: # or len(self._current_path_builder) >= self.max_path_length:
+                self._get_rewards_for_episode( episode)
                 self._handle_rollout_ending()
-                new_observation = self._start_new_rollout()
+                observation = self._start_new_rollout()
             else:
-                new_observation = next_ob
+                observation = next_ob
             #return new_observation
         return
     
@@ -233,8 +235,8 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
         pass
     
     def train_batch(self, start_epoch):
-        self._current_path_builder = PathBuilder()
-        observation = self._start_new_rollout()
+        #self._current_path_builder = PathBuilder()
+        #observation = self._start_new_rollout()
         for epoch in gt.timed_for(
                 range(start_epoch, self.num_epochs),
                 save_itrs=True,
@@ -243,9 +245,9 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
             set_to_train_mode(self.training_env)
             # This implementation is rather naive. If you want to (e.g.)
             # parallelize data collection, this would be the place to do it.
-            for _ in range(self.num_env_steps_per_epoch):
-                observation = self._take_step_in_env(observation)
-            #self._collect_batched_episodes(self.num_env_steps_per_epoch)
+            #for _ in range(self.num_env_steps_per_epoch):
+            #    observation = self._take_step_in_env(observation)
+            self._collect_batched_episodes(self.num_env_steps_per_epoch)
             gt.stamp('sample')
 
             self._try_to_train()
