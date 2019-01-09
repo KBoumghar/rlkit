@@ -194,8 +194,8 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
             self._n_env_steps_total += 1
             num_steps_actual +=1
             
-            terminal = np.array([terminal])
-            reward = np.array([reward])
+            #terminal = np.array([terminal])
+            #reward = np.array([reward])
             # self._handle_step(
             #     observation,
             #     action,
