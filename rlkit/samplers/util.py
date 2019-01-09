@@ -48,7 +48,7 @@ def rollout(env, agent, max_path_length=np.inf, animated=False):
         o = next_o
         if animated:
             env.render()
-
+    rewards = env.evaluate_episode(observations)
     actions = np.array(actions)
     if len(actions.shape) == 1:
         actions = np.expand_dims(actions, 1)
