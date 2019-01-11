@@ -290,6 +290,8 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
     def _try_to_train(self):
         if self._can_train():
             self.training_mode(True)
+            if self.should_cotrain:
+                self._cotrain()
             for i in range(self.num_updates_per_train_call):
                 self._do_training()
                 self._n_train_steps_total += 1

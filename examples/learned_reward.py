@@ -11,20 +11,29 @@ import matplotlib.pyplot as plt
 
 import rlkit.torch.pytorch_util as ptu
 from rlkit.launchers.launcher_util import setup_logger
-from rlkit.torch.dqn.dqn import DQN
+from rlkit.torch.dqn.dqn_cotrain import DQN
 from rlkit.torch.networks import Mlp
 from gridworld.algorithms.models import Policy
 from gridworld.rewards.reward_functions import DeltaRewards
 from variant import VARIANT
 import torch
+from gridworld.algorithms.datasets import DeltaDataset
 
 device = torch.device("cuda")
 model_path = '/home/coline/affordance_world/affordance_world/agentcentric_model_2480056_epoch06.pt'
 state_dict, epoch, num_per_epoch , _= torch.load(model_path)
 delta_star = np.load('/home/coline/affordance_world/affordance_world/EatBreadPolicy_delta.npy')
 delta_star =  torch.from_numpy(delta_star).to(device)
-R = DeltaRewards(state_dict, device, trajectory=0, delta_m=1,delta_star=delta_star)
+R = DeltaRewards(state_dict, device, trajectory=0, delta_l=1,delta_star=delta_star)
 reward_fn = R
+
+
+train_loader = torch.utils.data.DataLoader(
+    DeltaDataset(directory='/home/coline/affordance_world/data/agent_centric_demonstrations/',
+                             tasks=['EatBreadPolicy','GoToHousePolicy'],
+                             train=True, tasksize=None),
+    batch_size=8, shuffle=True)
+
 def experiment(variant):
     env = gym.make('HammerWorld-PlaceholderReward-EatBreadPolicy-v0')
     env.reward_function = reward_fn
@@ -44,6 +53,8 @@ def experiment(variant):
         training_env=training_env,
         qf=qf,
         qf_criterion=qf_criterion,
+        reward_model=R.model,
+        reward_dataloader=train_loader,
         **variant['algo_params']
     )
     algorithm.to(ptu.device)
@@ -53,5 +64,5 @@ def experiment(variant):
 if __name__ == "__main__":
     # noinspection PyTypeChecker
     VARIANT['algo_params']['replay_buffer_size']= 100000
-    setup_logger('eatbread-deltastar-model', variant=VARIANT)
+    setup_logger('eatbread-deltastarmatch-model', variant=VARIANT)
     experiment(VARIANT)
