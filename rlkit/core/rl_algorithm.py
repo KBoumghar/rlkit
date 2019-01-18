@@ -215,6 +215,7 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
         return
     
     def _get_rewards_for_episode(self, episode):
+        print("getting rewards")
         observation_path = [timestep[0] for timestep in episode]
         rewards = self.training_env.evaluate_episode(observation_path)
         for i in range(len(episode)):

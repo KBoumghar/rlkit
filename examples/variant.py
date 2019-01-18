@@ -11,7 +11,7 @@ VARIANT = dict(
         learning_rate=0.001,
         hard_update_period=1000,
         save_environment=True,  
-        collection_mode='batch',
+        #collection_mode='batch',
         max_path_length=30
     ),
 )

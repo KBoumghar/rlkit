@@ -55,6 +55,7 @@ class DQN(TorchRLAlgorithm):
         super().__init__(
             env, exploration_policy, eval_policy=self.policy, **kwargs
         )
+        self.should_cotrain = False
         self.qf = qf
         if target_qf is None:
             self.target_qf = self.qf.copy()

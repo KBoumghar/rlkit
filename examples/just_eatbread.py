@@ -65,5 +65,5 @@ def experiment(variant):
 if __name__ == "__main__":
     # noinspection PyTypeChecker
     VARIANT['algo_params']['replay_buffer_size']= 100000
-    setup_logger(pol+'-deltapath-model', variant=VARIANT)
+    setup_logger(pol+'-sparse', variant=VARIANT)
     experiment(VARIANT)
