@@ -14,18 +14,18 @@ from rlkit.launchers.launcher_util import setup_logger
 from rlkit.torch.dqn.dqn import DQN
 from rlkit.torch.networks import Mlp
 from gridworld.algorithms.models import GoalPolicy
-from gridworld.rewards.reward_functions import FCNDeltaRewards
+from gridworld.rewards.reward_functions import RegDeltaRewards
 from variant import VARIANT
 import torch
 from gridworld.algorithms.datasets import DeltaDataset
 
 device = torch.device("cuda")
 #model_path = '/home/coline/affordance_world/affordance_world/agentcentric_model_2480056_epoch06.pt'
-model_path = '/home/coline/affordance_world/affordance_world/path_reg_model_314996_epoch14.pt'
+model_path = '/home/coline/affordance_world/affordance_world/path_nomse_longtraj_model_270769_epoch26.pt'
 state_dict, epoch, num_per_epoch , _= torch.load(model_path)
 #delta_star = np.load('/home/coline/affordance_world/affordance_world/EatBreadPolicy_delta.npy')
 #delta_star =  torch.from_numpy(delta_star).to(device)
-R = FCNDeltaRewards(state_dict, device)
+R = RegDeltaRewards(state_dict, device)
 reward_fn = R
 
 
@@ -34,7 +34,7 @@ reward_fn = R
 #                              tasks=['EatBreadPolicy','GoToHousePolicy'],
 #                              train=True, tasksize=None),
 #     batch_size=8, shuffle=True)
-pol = 'EatBreadPolicy'
+pol = 'GoToHousePolicy'
 def experiment(variant):
     env = gym.make('HammerWorld-Delta-'+pol+'-v0')
     env.reward_function = reward_fn

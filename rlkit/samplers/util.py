@@ -36,6 +36,7 @@ def rollout(env, agent, max_path_length=np.inf, animated=False):
     while path_length < max_path_length:
         a, agent_info = agent.get_action(o)
         next_o, r, d, env_info = env.step(a)
+        #print("time", path_length, "reward", r)
         observations.append(o)
         rewards.append(r)
         terminals.append(d)
