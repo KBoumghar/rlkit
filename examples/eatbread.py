@@ -56,5 +56,6 @@ if __name__ == "__main__":
             save_environment=True,  # Can't serialize CartPole for some reason
         ),
     )
+    VARIANT['algo_params']['replay_buffer_size']= 10000
     setup_logger('oneobjeatbread_convfanin', variant=VARIANT)
     experiment(VARIANT)
