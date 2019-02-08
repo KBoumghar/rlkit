@@ -12,7 +12,7 @@ from rlkit.torch import pytorch_util as ptu
 from rlkit.torch.core import PyTorchModule
 from rlkit.torch.data_management.normalizer import TorchFixedNormalizer
 from rlkit.torch.modules import LayerNorm
-
+import numpy as np
 
 def identity(x):
     return x
@@ -61,8 +61,10 @@ class Mlp(PyTorchModule):
                 self.layer_norms.append(ln)
 
         self.last_fc = nn.Linear(in_size, output_size)
+        #nn.init.orthogonal_(self.last_fc.weight.data)
         self.last_fc.weight.data.uniform_(-init_w, init_w)
-        self.last_fc.bias.data.uniform_(-init_w, init_w)
+        torch.nn.init.normal_(self.last_fc.weight, mean=0, std=1/np.sqrt(input_size))
+        self.last_fc.bias.data.uniform_(-0.000001, 0.000001)
 
     def forward(self, input, return_preactivations=False):
         h = input
@@ -124,3 +126,25 @@ class TanhMlpPolicy(MlpPolicy):
     def __init__(self, *args, **kwargs):
         self.save_init_params(locals())
         super().__init__(*args, output_activation=torch.tanh, **kwargs)
+
+
+class ConcatComposition(PyTorchModule):
+    """
+    A class to run the first module on all inputs, then concat them 
+    and run the second module.
+    """
+    def __init__(self, first, second):
+        self.save_init_params(locals())
+        super().__init__()
+        self.first = first
+        self.second = second
+        
+    def forward(self, inputs):
+        #print(len(inputs), [x.shape for x in inputs])
+        #print(inputs.shape)
+        obs = inputs[:,0, :]
+        goal = inputs[:,1, :]
+        encodings = [self.first(x) for x in (obs, goal)]
+        #import pdb; pdb.set_trace()
+        y = torch.cat(encodings, dim=1)
+        return self.second(y)
