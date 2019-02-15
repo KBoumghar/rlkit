@@ -4,7 +4,7 @@ import pickle
 from rlkit.core import logger
 from rlkit.samplers.rollout_functions import multitask_rollout
 from rlkit.torch import pytorch_util as ptu
-from rlkit.envs.vae_wrapper import VAEWrappedEnv
+#from rlkit.envs.vae_wrapper import VAEWrappedEnv
 
 
 def simulate_policy(args):
@@ -17,8 +17,8 @@ def simulate_policy(args):
     if args.gpu:
         ptu.set_gpu_mode(True)
         policy.to(ptu.device)
-    if isinstance(env, VAEWrappedEnv):
-        env.mode(args.mode)
+#     if isinstance(env, VAEWrappedEnv):
+#         env.mode(args.mode)
     if args.enable_render or hasattr(env, 'enable_render'):
         # some environments need to be reconfigured for visualization
         env.enable_render()

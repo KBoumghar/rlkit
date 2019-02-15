@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import numpy as np
 import torch
+from torch.nn import functional as F
 import torch.optim as optim
 from torch import nn as nn
 
@@ -11,7 +12,7 @@ from rlkit.exploration_strategies.base import (
 )
 from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
 from rlkit.core.eval_util import create_stats_ordered_dict
-from rlkit.policies.argmax import ArgmaxDiscretePolicy
+from rlkit.policies.argmax import ArgmaxDiscretePolicy, MaxEntDiscretePolicy
 from rlkit.torch.torch_rl_algorithm import TorchRLAlgorithm
 
 
@@ -47,7 +48,7 @@ class DQN(TorchRLAlgorithm):
             action_space=env.action_space,
             prob_random_action=epsilon,
         )
-        self.policy = policy or ArgmaxDiscretePolicy(qf)
+        self.policy = policy or MaxEntDiscretePolicy(qf)
         exploration_policy = PolicyWrappedWithExplorationStrategy(
             exploration_strategy=exploration_strategy,
             policy=self.policy,
@@ -90,9 +91,10 @@ class DQN(TorchRLAlgorithm):
         y_target = rewards + (1. - terminals) * self.discount * target_q_values
         y_target = y_target.detach()
         # actions is a one-hot vector
-        y_pred = torch.sum(self.qf(obs) * actions, dim=1, keepdim=True)
-        qf_loss = self.qf_criterion(y_pred, y_target)
-
+        q_values =self.qf(obs)
+        y_pred = torch.sum(q_values* actions, dim=1, keepdim=True)
+        neg_entropy = torch.sum(q_values*torch.exp(q_values))
+        qf_loss = self.qf_criterion(y_pred, y_target) + neg_entropy/1000
         """
         Update networks
         """
