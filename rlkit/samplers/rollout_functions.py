@@ -23,7 +23,8 @@ def create_rollout_function(rollout_function, **initial_kwargs):
         return rollout_function(*args, **combined_args)
     return wrapped_rollout_func
 
-
+def stack_goal(obs, goal):
+    return np.hstack((obs, goal))
 def multitask_rollout(
         env,
         agent,
@@ -32,6 +33,7 @@ def multitask_rollout(
         observation_key='observation',
         desired_goal_key='desired_goal',
         get_action_kwargs=None,
+        goal_stacker=stack_goal,
 ):
     if get_action_kwargs is None:
         get_action_kwargs = {}
@@ -52,7 +54,7 @@ def multitask_rollout(
     while path_length < max_path_length:
         full_observations.append(o)
         o = o[observation_key]
-        new_obs = np.hstack((o, goal))
+        new_obs = goal_stacker(o, goal)
         a, agent_info = agent.get_action(new_obs, **get_action_kwargs)
         next_o, r, d, env_info = env.step(a)
         if animated:

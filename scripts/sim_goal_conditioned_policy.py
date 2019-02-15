@@ -1,6 +1,6 @@
 import argparse
 import pickle
-
+import numpy as np
 from rlkit.core import logger
 from rlkit.samplers.rollout_functions import multitask_rollout
 from rlkit.torch import pytorch_util as ptu
@@ -17,8 +17,7 @@ def simulate_policy(args):
     if args.gpu:
         ptu.set_gpu_mode(True)
         policy.to(ptu.device)
-#     if isinstance(env, VAEWrappedEnv):
-#         env.mode(args.mode)
+
     if args.enable_render or hasattr(env, 'enable_render'):
         # some environments need to be reconfigured for visualization
         env.enable_render()
@@ -32,6 +31,7 @@ def simulate_policy(args):
             animated=not args.hide,
             observation_key='observation',
             desired_goal_key='desired_goal',
+            goal_stacker =  lambda obs, goal: np.concatenate([obs,goal] ,axis = 0).reshape( 2, -1)
         ))
         if hasattr(env, "log_diagnostics"):
             env.log_diagnostics(paths)
