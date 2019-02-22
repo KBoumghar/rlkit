@@ -14,18 +14,31 @@ from rlkit.launchers.launcher_util import setup_logger
 from rlkit.torch.dqn.dqn import DQN
 from rlkit.torch.networks import Mlp
 from gridworld.algorithms.models import GoalPolicy
-from gridworld.rewards.reward_functions import RegDeltaRewards
+from gridworld.rewards.reward_functions import SubstractionRewards
 from variant import VARIANT
 import torch
-from gridworld.algorithms.datasets import DeltaDataset
-
+import glob
+import cv2
+from gridworld.algorithms.datasets import SelfContrastiveDeltaDataset
+pol = 'PickupHammerPolicy'
 device = torch.device("cuda")
 #model_path = '/home/coline/affordance_world/affordance_world/agentcentric_model_2480056_epoch06.pt'
-model_path = '/home/coline/affordance_world/affordance_world/path_nomse_longtraj_model_270769_epoch26.pt'
+model_path = '/home/coline/affordance_world/affordance_world/contrastive_results/selfcontrastive_314916_epoch08.pt'
 state_dict, epoch, num_per_epoch , _= torch.load(model_path)
 #delta_star = np.load('/home/coline/affordance_world/affordance_world/EatBreadPolicy_delta.npy')
 #delta_star =  torch.from_numpy(delta_star).to(device)
-R = RegDeltaRewards(state_dict, device)
+def load_path(path):
+    image_files = sorted(glob.glob(path))
+    images = [cv2.imread(img_name, cv2.IMREAD_COLOR) for img_name in image_files]
+    return images
+
+R = SubstractionRewards(state_dict, device)
+path = '/home/coline/affordance_world/data/actions_notcentric/'+pol+'/img0000_*.png'
+images = load_path(path)
+RENDER_DIR = '/home/coline/Desktop/renderings/'
+last_img = images[-1]
+initgstar = R.get_delta_star(images[0], images[-1]).squeeze(0).cpu().detach().numpy()
+R.delta_star = initgstar 
 reward_fn = R
 
 
@@ -34,7 +47,7 @@ reward_fn = R
 #                              tasks=['EatBreadPolicy','GoToHousePolicy'],
 #                              train=True, tasksize=None),
 #     batch_size=8, shuffle=True)
-pol = 'GoToHousePolicy'
+
 def experiment(variant):
     env = gym.make('HammerWorld-Delta-'+pol+'-v0')
     env.reward_function = reward_fn

@@ -5,14 +5,12 @@ import numpy as np
 import rlkit.torch.pytorch_util as ptu
 from rlkit.policies.base import SerializablePolicy
 from rlkit.torch.core import PyTorchModule
-<<<<<<< HEAD
+
 import torch
 from torch.nn import functional as F
 import torch.optim as optim
 from torch import nn as nn
-=======
-from torch.nn import functional as F
->>>>>>> discern
+
 
 
 class ArgmaxDiscretePolicy(PyTorchModule, SerializablePolicy):

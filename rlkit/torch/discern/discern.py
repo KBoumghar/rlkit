@@ -100,6 +100,7 @@ class DISCERN(TorchRLAlgorithm):
         super().__init__(
             env, exploration_policy, eval_policy=self.policy, batch_size=batch_size,**kwargs
         )
+        self.should_cotrain = False
         self.qf = qf
         self.state_encoder = state_encoder
         self.Xi = Xi
