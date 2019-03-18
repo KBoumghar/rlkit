@@ -136,12 +136,15 @@ class CNN(PyTorchModule):
 
 class F_model(PyTorchModule):
     def __init__(self, discount=0.9,agent_centric=False):
+        self.save_init_params(locals())
+        super().__init__()
         self.g = CNN(agent_centric=agent_centric)
         self.h = CNN(agent_centric=agent_centric, output_size=1)
         self.discount = discount
         
-    def forward(obs, a, next_obs):
-        r = self.g(obs)[a]
+    def forward(self, obs, a, next_obs):
+        #print("obs", obs.shape, "a", a.shape)
+        r = torch.sum(self.g(obs)*a, dim=1).unsqueeze(1)
         v_next = self.h(next_obs)
         v = self.h(obs)
         return r + self.discount*v_next - v

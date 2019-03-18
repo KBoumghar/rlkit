@@ -5,6 +5,7 @@ import numpy as np
 import rlkit.torch.pytorch_util as ptu
 from rlkit.policies.base import SerializablePolicy
 from rlkit.torch.core import PyTorchModule
+from torch.nn import functional as F
 
 
 class ArgmaxDiscretePolicy(PyTorchModule, SerializablePolicy):

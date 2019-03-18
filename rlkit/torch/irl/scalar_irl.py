@@ -17,7 +17,7 @@ from rlkit.torch.ddpg.ddpg import DDPG
 # from rlkit.torch.sac.twin_sac import TwinSAC
 # from rlkit.torch.td3.td3 import TD3
 # from rlkit.torch.dqn.dqn import DQN
-from gridworld.algorithms.datasets import OnlineDeltaDataset
+#from gridworld.algorithms.datasets import OnlineDeltaDataset
 
 from rlkit.torch.torch_rl_algorithm import TorchRLAlgorithm
 from rlkit.exploration_strategies.epsilon_greedy import EpsilonGreedy
@@ -83,6 +83,7 @@ class IRL(TorchRLAlgorithm):
         self.target_qf = self.qf.copy()
         self.f = f
         self.dataset = dataset
+        self.dataloader_iterator = iter(self.dataset)
         #self.labels = torch.arange(0,batch_size, dtype=torch.long)
         self.learning_rate = learning_rate
         self.use_hard_updates = use_hard_updates
@@ -94,12 +95,13 @@ class IRL(TorchRLAlgorithm):
         )
         self.f_optimizer = optim.Adam(
             self.f.parameters(),
-            lr=self.learning_rate,
+            lr=self.learning_rate/10,
         )
         self.qf_criterion = qf_criterion or nn.MSELoss()
-        self.observation_key = observation_key
-        self.desired_goal_key = desired_goal_key
-        
+        self._did_training = 0
+        self.score_mean = 0
+        self.score_std = 1
+
     def _do_training(self):
         batch = self.get_batch()
         rewards = batch['rewards']
@@ -120,7 +122,7 @@ class IRL(TorchRLAlgorithm):
         y_target = rewards + (1. - terminals) * self.discount * target_q_values
         y_target = y_target.detach()
         # actions is a one-hot vector
-        q_values = self.qf(goal_obs)
+        q_values = self.qf(obs)
         
         y_pred = torch.sum(q_values* actions, dim=1, keepdim=True)
         qf_loss = self.qf_criterion(y_pred, y_target) 
@@ -131,35 +133,32 @@ class IRL(TorchRLAlgorithm):
         qf_loss.backward()
         self.qf_optimizer.step()
         self._update_target_network()
-        #self.Xi_optimizer.zero_grad()
-        #xi_loss.backward()
-        #import pdb; pdb. set_trace()
-        #self.Xi_optimizer.step()
+
         self._did_training += 1
         """
         Update Xi
         """
-        if self._did_training > 4:
+        irl_loss = 0
+        if True:# self._did_training > :
             self._did_training = 0
             device = torch.device("cuda")
-            test_paths = self.get_eval_paths()
-            train_loader = torch.utils.data.DataLoader(
-                OnlineDeltaDataset(test_paths),
-                batch_size=8, shuffle=True)
-            train_loss = 0
-            train_l2 = 0
             #import pdb; pdb.set_trace()
             #print('model', self.reward_model.f_encoder.conv1.weight[0])
-            for batch_idx, poldata in enumerate(train_loader):
-                try:
-                    exp_data= next(self.dataloader_iterator)
-                except StopIteration:
-                    self.dataloader_iterator = iter(self.reward_dataloader)
-                    exp_data= next(self.dataloader_iterator)
-                self.f_optimizer.zero_grad()
-                loss = get_irl_loss(pol_data, exp_data)
-                loss.backward()
-                self.f_optimizer.step()
+            try:
+                exp_data= next(self.dataloader_iterator)
+            except StopIteration:
+                self.dataloader_iterator = iter(self.dataset)
+                exp_data= next(self.dataloader_iterator)
+            self.f_optimizer.zero_grad()
+            loss = self.get_irl_loss((obs, actions, next_obs), exp_data)
+            irl_loss = loss.item()
+            loss.backward()
+            self.f_optimizer.step()
+            scores = self.get_rewards(obs, actions, next_obs, centered=False)
+            #import pdb; pdb.set_trace()
+            self.score_std = np.std(scores)
+            self.score_mean = np.mean(scores)
+            self.eval_statistics['IRL Loss'] =irl_loss
             
         """
         Save some statistics for eval using just one batch.
@@ -167,19 +166,19 @@ class IRL(TorchRLAlgorithm):
         if self.need_to_update_eval_statistics:
             self.need_to_update_eval_statistics = False
             self.eval_statistics['QF Loss'] = np.mean(ptu.get_numpy(qf_loss))
-            self.eval_statistics['QF Entropy Loss'] = np.mean(ptu.get_numpy(-1*neg_entropy))
-            print("q_values", q_values)
-            self.eval_statistics['Xi Loss'] = np.mean(ptu.get_numpy(xi_loss))
+            self.eval_statistics['ScoreMean'] = self.score_mean
+            self.eval_statistics['ScoreStd'] =self.score_std
+            #print("q_values", q_values)
             self.eval_statistics.update(create_stats_ordered_dict(
                 'Y Predictions',
                 ptu.get_numpy(y_pred),
             ))
             self.eval_statistics.update(create_stats_ordered_dict(
-                'Recomputed Rewards',
-                ptu.get_numpy(rewards),
+                'LearnedReward',
+                rewards,
             ))
-            
-
+            self.eval_statistics['IRL Loss'] =irl_loss
+            #self.eval_statistics['IRL Loss'] = np.mean(ptu.get_numpy(irl_loss))
     
     def _update_target_network(self):
         if self.use_hard_updates:
@@ -195,18 +194,14 @@ class IRL(TorchRLAlgorithm):
     def networks(self):
         return [
             self.qf,
-            self.target_qf,
-            self.state_encoder,
+            self.f,
         ]
     def to(self, device=None):
         if device is None:
             device = ptu.device
         for net in self.networks:
             net.to(device)
-        self.labels.to(device)
-
-
-
+        self.device = device
 
 #     def get_batch(self):
 #         batch = super().get_batch()
@@ -217,19 +212,30 @@ class IRL(TorchRLAlgorithm):
 
 
 
-    def get_rewards(self, obs, a, next_obs):
+    def get_rewards(self, obs, a, next_obs, centered=True):
         d_values = self.Disc(obs, a, next_obs)
-        r = torch.log(d_values) - torch.log(1-d_values) 
+        r = (torch.log(d_values) - torch.log(1-d_values)).detach().numpy()
+        if centered:
+            r = np.clip((r - self.score_mean) / self.score_std, -3, 3)
         return r
     
-    def get_irl_loss(pol_data, exp_data):
-        exp_obs, exp_a, exp_next_obs = self.process_expert_data(data, device)
-        pol_obs, pol_a, pol_next_obs = self.process_poldata(poldata, device)
+    def process_expert_data(self, data):
+        image = data['image'].to(self.device)
+        next_image = data['next_image'].to(self.device)
+        action =  data['action'].to(self.device) 
+        return image, action, next_image
+    
+    def get_irl_loss(self, pol_data, exp_data):
+        exp_obs, exp_a, exp_next_obs = self.process_expert_data(exp_data)
         exp_f = self.f(exp_obs, exp_a, exp_next_obs)
-        pol_f = self.Disc(pol_obs, pol_a, pol_next_obs)
-        exp_log_pq = torch.logsumexp([exp_f, self.qf(exp_obs)[a]], dim=0)
+        exp_pi_a = torch.sum(self.qf(exp_obs)*exp_a, dim=1).unsqueeze(1)
+        exp_log_pq = torch.logsumexp(torch.stack([exp_f, exp_pi_a]), dim=0)
         exp_loss = -1*(torch.sum(exp_f-exp_log_pq))
-        pol_log_pq = torch.logsumexp([pol_f, self.qf(pol_obs)[a]], dim=0)
+        
+        pol_obs, pol_a, pol_next_obs = pol_data
+        pol_f = self.Disc(pol_obs, pol_a, pol_next_obs)
+        pol_pi_a = torch.sum(self.qf(pol_obs)*pol_a, dim=1).unsqueeze(1)
+        pol_log_pq = torch.logsumexp(torch.stack([pol_f, pol_pi_a]), dim=0)
         pol_loss = (torch.sum(pol_f-pol_log_pq))
         return pol_loss + exp_loss
 
@@ -237,7 +243,8 @@ class IRL(TorchRLAlgorithm):
         f_values = self.f(obs, a, next_obs)
 #         numerator = torch.exp(f_values)
 #         denominator = numerator+ self.qf(obs)[a]
-        log_pq = torch.logsumexp([f_values, self.qf(obs)[a]], dim=0)
+        log_pi_a = torch.sum(self.qf(obs)*a, dim=1).unsqueeze(1)
+        log_pq = torch.logsumexp(torch.stack([f_values, log_pi_a]), dim=0)
         output = torch.exp(f_values-log_pq)
         return output
     
