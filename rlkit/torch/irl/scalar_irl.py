@@ -95,12 +95,51 @@ class IRL(TorchRLAlgorithm):
         )
         self.f_optimizer = optim.Adam(
             self.f.parameters(),
-            lr=self.learning_rate/10,
+            lr=self.learning_rate/500,
         )
         self.qf_criterion = qf_criterion or nn.MSELoss()
         self._did_training = 0
         self.score_mean = 0
         self.score_std = 1
+        
+        
+    def _do_irl_training(self):
+        batch = self.get_batch()
+        rewards = batch['rewards']
+        terminals = batch['terminals']
+        obs = batch['observations']
+        actions = batch['actions']
+        next_obs = batch['next_observations']
+        #goals = batch['resampled_goals']
+        
+        """
+        Update F
+        """
+        irl_loss = 0
+        if True:# self._did_training > :
+            device = torch.device("cuda")
+            #import pdb; pdb.set_trace()
+            #print('model', self.reward_model.f_encoder.conv1.weight[0])
+            try:
+                exp_data= next(self.dataloader_iterator)
+            except StopIteration:
+                self.dataloader_iterator = iter(self.dataset)
+                exp_data= next(self.dataloader_iterator)
+            self.f_optimizer.zero_grad()
+            loss = self.get_irl_loss((obs, actions, next_obs), exp_data)
+            irl_loss = loss.item()
+            loss.backward()
+            self.f_optimizer.step()
+            with torch.no_grad():
+                scores = self.get_rewards(obs, actions, next_obs, centered=False)
+            #import pdb; pdb.set_trace()
+            self.score_std = np.std(scores)
+            self.score_mean = np.mean(scores)
+
+        if self.need_to_update_eval_statistics:
+            self.eval_statistics['IRL Loss'] =irl_loss
+            self.eval_statistics['ScoreMean'] = self.score_mean
+            self.eval_statistics['ScoreStd'] =self.score_std
 
     def _do_training(self):
         batch = self.get_batch()
@@ -110,6 +149,10 @@ class IRL(TorchRLAlgorithm):
         actions = batch['actions']
         next_obs = batch['next_observations']
         #goals = batch['resampled_goals']
+        
+        """
+        Update F
+        """ 
         with torch.no_grad():
             rewards = self.get_rewards(obs, actions, next_obs)
 
@@ -135,39 +178,14 @@ class IRL(TorchRLAlgorithm):
         self._update_target_network()
 
         self._did_training += 1
-        """
-        Update Xi
-        """
-        irl_loss = 0
-        if True:# self._did_training > :
-            self._did_training = 0
-            device = torch.device("cuda")
-            #import pdb; pdb.set_trace()
-            #print('model', self.reward_model.f_encoder.conv1.weight[0])
-            try:
-                exp_data= next(self.dataloader_iterator)
-            except StopIteration:
-                self.dataloader_iterator = iter(self.dataset)
-                exp_data= next(self.dataloader_iterator)
-            self.f_optimizer.zero_grad()
-            loss = self.get_irl_loss((obs, actions, next_obs), exp_data)
-            irl_loss = loss.item()
-            loss.backward()
-            self.f_optimizer.step()
-            scores = self.get_rewards(obs, actions, next_obs, centered=False)
-            #import pdb; pdb.set_trace()
-            self.score_std = np.std(scores)
-            self.score_mean = np.mean(scores)
-            self.eval_statistics['IRL Loss'] =irl_loss
-            
+
         """
         Save some statistics for eval using just one batch.
         """
         if self.need_to_update_eval_statistics:
             self.need_to_update_eval_statistics = False
             self.eval_statistics['QF Loss'] = np.mean(ptu.get_numpy(qf_loss))
-            self.eval_statistics['ScoreMean'] = self.score_mean
-            self.eval_statistics['ScoreStd'] =self.score_std
+            
             #print("q_values", q_values)
             self.eval_statistics.update(create_stats_ordered_dict(
                 'Y Predictions',
@@ -177,7 +195,7 @@ class IRL(TorchRLAlgorithm):
                 'LearnedReward',
                 rewards,
             ))
-            self.eval_statistics['IRL Loss'] =irl_loss
+            
             #self.eval_statistics['IRL Loss'] = np.mean(ptu.get_numpy(irl_loss))
     
     def _update_target_network(self):

@@ -23,6 +23,7 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
             num_steps_per_epoch=10000,
             num_steps_per_eval=1000,
             num_updates_per_env_step=1,
+            num_irl_updates_per_env_step=1,
             num_updates_per_epoch=None,
             batch_size=1024,
             max_path_length=1000,
@@ -80,6 +81,7 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
         self.num_steps_per_eval = num_steps_per_eval
         if collection_mode == 'online':
             self.num_updates_per_train_call = num_updates_per_env_step
+            self.num_irl_updates_per_train_call = num_irl_updates_per_env_step
         else:
             self.num_updates_per_train_call = num_updates_per_epoch
         self.batch_size = batch_size
@@ -227,6 +229,8 @@ class RLAlgorithm(metaclass=abc.ABCMeta):
     def _try_to_train(self):
         if self._can_train():
             self.training_mode(True)
+            for i in range(self.num_irl_updates_per_train_call):
+                self._do_irl_training()
             for i in range(self.num_updates_per_train_call):
                 self._do_training()
                 self._n_train_steps_total += 1
