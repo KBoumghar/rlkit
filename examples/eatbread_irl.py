@@ -7,7 +7,6 @@ Note that one epoch = 5k steps, so 200 epochs = 1 million steps.
 import gym
 import torch
 import rlkit.torch.pytorch_util as ptu
-from rlkit.data_management.reward_replay_buffer import ObsDictRelabelingBuffer
 from rlkit.exploration_strategies.base import (
     PolicyWrappedWithExplorationStrategy
 )
@@ -33,9 +32,9 @@ from gridworld.algorithms.composite_dataset import IRLDataset
 VARIANT = dict(
     algo_params=dict(
         num_epochs=500,
-        num_steps_per_epoch=1000,
+        num_steps_per_epoch=5000,
         num_steps_per_eval=1000,
-        num_updates_per_epoch=1000,
+        num_updates_per_epoch=5000,
         batch_size=128,
         discount=0.95,
         epsilon=0.2,
@@ -47,7 +46,7 @@ VARIANT = dict(
         max_path_length=30
     ),
 )
-dataset = IRLDataset(directory='/home/coline/affordance_world/data/eatbread_irl_10x10/',train=True)
+dataset = IRLDataset(directory='/home/coline/affordance_world/data/eatbread_irl_10x10_noisy/',train=True, include_ref=False)
 train_loader = torch.utils.data.DataLoader(dataset, drop_last = True,
     batch_size=128, shuffle=True)
 

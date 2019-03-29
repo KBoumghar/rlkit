@@ -498,6 +498,7 @@ def run_experiment(
     :return:
     """
     try:
+        print("trying to import doodad")
         import doodad
         import doodad.mode
         import doodad.ssh
@@ -541,6 +542,7 @@ def run_experiment(
 
     try:
         import git
+        import doodad
         doodad_path = osp.abspath(osp.join(
             osp.dirname(doodad.__file__),
             os.pardir

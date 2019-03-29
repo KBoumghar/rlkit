@@ -42,7 +42,7 @@ class IRL(TorchRLAlgorithm):
             use_hard_updates=False,
             hard_update_period=1000,
             tau=0.001,
-            epsilon=0.1,
+            epsilon=0.4,
             qf_criterion=None,
             observation_key=None,
             desired_goal_key=None,
@@ -93,9 +93,9 @@ class IRL(TorchRLAlgorithm):
             self.qf.parameters(),
             lr=self.learning_rate,
         )
-        self.f_optimizer = optim.Adam(
+        self.f_optimizer = optim.SGD(
             self.f.parameters(),
-            lr=self.learning_rate/500,
+            lr=self.learning_rate/10,
         )
         self.qf_criterion = qf_criterion or nn.MSELoss()
         self._did_training = 0
@@ -126,7 +126,7 @@ class IRL(TorchRLAlgorithm):
                 self.dataloader_iterator = iter(self.dataset)
                 exp_data= next(self.dataloader_iterator)
             self.f_optimizer.zero_grad()
-            loss = self.get_irl_loss((obs, actions, next_obs), exp_data)
+            loss, accs = self.get_irl_loss((obs, actions, next_obs), exp_data)
             irl_loss = loss.item()
             loss.backward()
             self.f_optimizer.step()
@@ -135,11 +135,18 @@ class IRL(TorchRLAlgorithm):
             #import pdb; pdb.set_trace()
             self.score_std = np.std(scores)
             self.score_mean = np.mean(scores)
+#             if accs[1] > 0.8:
+#                 self.f_optimizer.defaults['lr'] = self.learning_rate/100
+#             elif accs[1] < 0.2 :
+#                 self.f_optimizer.defaults['lr'] = self.learning_rate/10
+            
 
-        if self.need_to_update_eval_statistics:
-            self.eval_statistics['IRL Loss'] =irl_loss
-            self.eval_statistics['ScoreMean'] = self.score_mean
-            self.eval_statistics['ScoreStd'] =self.score_std
+        #if self.need_to_update_eval_statistics:
+        self.eval_statistics['IRL Loss'] =irl_loss
+        self.eval_statistics['ScoreMean'] = self.score_mean
+        self.eval_statistics['ScoreStd'] =self.score_std
+        self.eval_statistics['exp_acc'] = ptu.get_numpy(accs[0])
+        self.eval_statistics['pol_acc'] = ptu.get_numpy(accs[1])
 
     def _do_training(self):
         batch = self.get_batch()
@@ -154,7 +161,7 @@ class IRL(TorchRLAlgorithm):
         Update F
         """ 
         with torch.no_grad():
-            rewards = self.get_rewards(obs, actions, next_obs)
+            rewards = self.get_rewards(obs, actions, next_obs, centered=True)
 
         """
         Compute loss
@@ -243,26 +250,24 @@ class IRL(TorchRLAlgorithm):
         action =  data['action'].to(self.device) 
         return image, action, next_image
     
-    def get_irl_loss(self, pol_data, exp_data):
-        exp_obs, exp_a, exp_next_obs = self.process_expert_data(exp_data)
-        exp_f = self.f(exp_obs, exp_a, exp_next_obs)
-        exp_pi_a = torch.sum(self.qf(exp_obs)*exp_a, dim=1).unsqueeze(1)
-        exp_log_pq = torch.logsumexp(torch.stack([exp_f, exp_pi_a]), dim=0)
-        exp_loss = -1*(torch.sum(exp_f-exp_log_pq))
-        
-        pol_obs, pol_a, pol_next_obs = pol_data
-        pol_f = self.Disc(pol_obs, pol_a, pol_next_obs)
-        pol_pi_a = torch.sum(self.qf(pol_obs)*pol_a, dim=1).unsqueeze(1)
-        pol_log_pq = torch.logsumexp(torch.stack([pol_f, pol_pi_a]), dim=0)
-        pol_loss = (torch.sum(pol_f-pol_log_pq))
-        return pol_loss + exp_loss
+    def get_irl_loss(self, pol_data, exp_data): 
+        exp_log_p_tau, exp_log_pq, exp_log_q_tau = self.get_intermediates(*self.process_expert_data(exp_data))
+        exp_loss = -1*(torch.sum(exp_log_p_tau-exp_log_pq))
+        pol_log_p_tau, pol_log_pq, pol_log_q_tau = self.get_intermediates(*pol_data)
+        pol_loss = -1*(torch.sum(pol_log_q_tau-pol_log_pq))
+        exp_acc =  torch.mean((torch.exp(exp_log_p_tau-exp_log_pq) > 0.5).type(torch.FloatTensor))
+        pol_acc = torch.mean((torch.exp(pol_log_p_tau-pol_log_pq) < 0.5).type(torch.FloatTensor))
+        return pol_loss + exp_loss, [exp_acc, pol_acc]
 
+    def get_intermediates(self,obs, a, next_obs ):
+        log_p_tau = self.f(obs, a, next_obs)
+        log_q_tau = torch.sum(self.qf(obs)*a, dim=1).unsqueeze(1)
+        log_pq = torch.logsumexp(torch.stack([log_p_tau, log_q_tau]), dim=0)
+        return log_p_tau, log_pq, log_q_tau
+    
     def Disc(self,obs, a, next_obs):
-        f_values = self.f(obs, a, next_obs)
-#         numerator = torch.exp(f_values)
-#         denominator = numerator+ self.qf(obs)[a]
-        log_pi_a = torch.sum(self.qf(obs)*a, dim=1).unsqueeze(1)
-        log_pq = torch.logsumexp(torch.stack([f_values, log_pi_a]), dim=0)
-        output = torch.exp(f_values-log_pq)
+        log_p_tau, log_pq, log_q_tau = self.get_intermediates(obs, a, next_obs )
+        output = torch.exp(log_p_tau-log_pq)
         return output
+    
     
