@@ -32,6 +32,7 @@ def multitask_rollout(
         observation_key='observation',
         desired_goal_key='desired_goal',
         get_action_kwargs=None,
+        train=None
 ):
     if get_action_kwargs is None:
         get_action_kwargs = {}
@@ -44,8 +45,11 @@ def multitask_rollout(
     env_infos = []
     next_observations = []
     path_length = 0
+    if train is not None:
+        o = env.reset(train=train)
+    else:
+        o = env.reset()
     agent.reset()
-    o = env.reset()
     if animated:
         env.render()
     goal = o[desired_goal_key]
