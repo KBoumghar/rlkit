@@ -17,6 +17,7 @@ def simulate_policy(args):
         set_gpu_mode(True)
         policy.cuda()
     while True:
+        print("!")
         path = rollout(
             env,
             policy,

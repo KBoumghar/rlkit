@@ -17,8 +17,10 @@ class EpsilonGreedy(RawExplorationStrategy):
         else:
             self.prob_random_action = LinearSchedule(prob_random_action, prob_random_action, steps)
         self.action_space = action_space
+        self.t = 0
 
-    def get_action_from_raw_action(self, action,t=0 **kwargs):
-        if random.random() <= self.prob_random_action.get_value(t):
+    def get_action_from_raw_action(self, action, **kwargs):
+        if random.random() <= self.prob_random_action.get_value(self.t):
             return self.action_space.sample()
+        self.t+=1
         return action
