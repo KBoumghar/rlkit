@@ -90,11 +90,18 @@ class Logger(object):
 
         self._log_tabular_only = False
         self._header_printed = False
+        self._comet_log = None
         self.table_printer = TerminalTablePrinter()
 
     def reset(self):
         self.__init__()
 
+    def set_comet_logger(self, log):
+        self._comet_log = log
+        
+    def get_comet_logger(self):
+        return self._comet_log
+        
     def _add_output(self, file_name, arr, fds, mode='a'):
         if file_name not in arr:
             mkdir_p(os.path.dirname(file_name))
@@ -173,6 +180,9 @@ class Logger(object):
 
     def record_tabular(self, key, val):
         self._tabular.append((self._tabular_prefix_str + str(key), str(val)))
+        if (self._comet_log is not None):
+            self._comet_log.log_metrics({str(self._tabular_prefix_str) + str(key): val})
+#             logger.set_step(step=settings["round"])
 
     def record_dict(self, d, prefix=None):
         if prefix is not None:
