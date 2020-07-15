@@ -29,3 +29,4 @@ torchvision==0.2.0
 sk-video==1.1.10
 git+https://github.com/vitchyr/multiworld.git
 moviepy
+comet_ml
