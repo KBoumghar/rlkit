@@ -10,7 +10,8 @@ class EnvReplayBuffer(SimpleReplayBuffer):
             self,
             max_replay_buffer_size,
             env,
-            env_info_sizes=None
+            env_info_sizes=None,
+            dtype="float32"
     ):
         """
         :param max_replay_buffer_size:
