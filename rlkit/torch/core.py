@@ -1,7 +1,15 @@
+import abc
 import numpy as np
 import torch
+from torch import nn as nn
 
 from rlkit.torch import pytorch_util as ptu
+
+class PyTorchModule(nn.Module, metaclass=abc.ABCMeta):
+    """
+    Keeping wrapper around to be a bit more future-proof.
+    """
+    pass
 
 
 def eval_np(module, *args, **kwargs):

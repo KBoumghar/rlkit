@@ -1,8 +1,8 @@
 
 
-from railrl.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
+from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
 from torch.utils.tensorboard import SummaryWriter
-from railrl.core import logger
+from rlkit.core import logger
 
 
 class PPOAlgorithm(TorchBatchRLAlgorithm):

@@ -2,9 +2,9 @@ import torch
 import numpy as np
 import pdb
 
-from railrl.torch.core import PyTorchModule
-from railrl.policies.base import Policy
-import railrl.torch.pytorch_util as ptu
+from rlkit.torch.core import PyTorchModule
+from rlkit.policies.base import Policy
+import rlkit.torch.pytorch_util as ptu
 import torch.distributions as tdist
 
 class GaussianMlpPolicyFixedVar(Policy, PyTorchModule):

@@ -3,10 +3,10 @@ import numpy as np
 import torch
 import pdb
 
-import railrl.torch.core as core
-import railrl.policies.base as base
-import railrl.misc.class_util as classu
-import railrl.torch.pytorch_util as ptu
+import rlkit.torch.core as core
+import rlkit.policies.base as base
+import rlkit.misc.class_util as classu
+import rlkit.torch.pytorch_util as ptu
 
 class ContinuousBernoulliMlpPolicy(base.Policy, core.PyTorchModule):
     def __init__(self, mlp, action_space=None, scale=None, shift=None):
