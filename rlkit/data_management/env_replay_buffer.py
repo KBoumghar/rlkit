@@ -31,7 +31,8 @@ class EnvReplayBuffer(SimpleReplayBuffer):
             max_replay_buffer_size=max_replay_buffer_size,
             observation_dim=get_dim(self._ob_space),
             action_dim=get_dim(self._action_space),
-            env_info_sizes=env_info_sizes
+            env_info_sizes=env_info_sizes,
+            dtype=dtype
         )
 
     def add_sample(self, observation, action, reward, terminal,
