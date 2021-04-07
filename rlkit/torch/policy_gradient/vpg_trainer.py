@@ -4,11 +4,11 @@ import numpy as np
 import torch.optim as optim
 
 import railrl.torch.pytorch_util as ptu
-from railrl.core import logger
-from railrl.data_management.env_replay_buffer import VPGEnvReplayBuffer
-from railrl.torch.core import np_to_pytorch_batch
-from railrl.torch.distributions import TanhNormal
-from railrl.torch.torch_rl_algorithm import TorchBatchRLAlgorithm, TorchTrainer
+from rlkit.core import logger
+from rlkit.data_management.env_replay_buffer import VPGEnvReplayBuffer
+from rlkit.torch.core import np_to_pytorch_batch
+from rlkit.torch.distributions import TanhNormal
+from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm, TorchTrainer
 import torch
 
 class VPGTrainer(TorchTrainer):

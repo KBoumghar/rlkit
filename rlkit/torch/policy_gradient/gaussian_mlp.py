@@ -1,5 +1,5 @@
 import torch
-from railrl.torch.core import PyTorchModule
+from rlkit.torch.core import PyTorchModule
 import numpy as np
 
 class GaussianMlp(PyTorchModule):

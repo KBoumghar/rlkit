@@ -1,8 +1,8 @@
 import torch
-from railrl.torch.core import PyTorchModule
+from rlkit.torch.core import PyTorchModule
 import numpy as np
-from railrl.policies.base import Policy
-import railrl.torch.pytorch_util as ptu
+from rlkit.policies.base import Policy
+import rlkit.torch.pytorch_util as ptu
 import torch.distributions as tdist
 
 class GaussianMlpPolicy(Policy, PyTorchModule):

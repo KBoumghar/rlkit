@@ -3,9 +3,9 @@ import logging
 import os
 import torch.optim as optim
 
-import railrl.torch.pytorch_util as ptu
-import railrl.core.pylogging
-from railrl.torch.torch_rl_algorithm import TorchTrainer
+import rlkit.torch.pytorch_util as ptu
+import rlkit.core.pylogging
+from rlkit.torch.torch_rl_algorithm import TorchTrainer
 import torch
 
 log = logging.getLogger(os.path.basename(__name__))
