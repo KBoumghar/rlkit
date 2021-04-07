@@ -22,7 +22,7 @@ awscli==1.11.179
 boto3==1.4.8
 ray==0.2.2
 path.py==10.3.1
-http://download.pytorch.org/whl/cu90/torch-0.4.1-cp35-cp35m-linux_x86_64.whl
+torch==0.4.1
 joblib==0.9.4
 opencv-python==3.4.0.12
 torchvision==0.2.0
