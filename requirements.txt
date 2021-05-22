@@ -15,7 +15,7 @@ sphinx_rtd_theme
 numpydoc
 cloudpickle==1.3.0
 cached-property==1.3.1
-gym==0.10.5
+gym==0.17.3
 gitpython==2.1.7
 gtimer==1.0.0b5
 # awscli==1.11.179
