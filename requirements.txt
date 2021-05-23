@@ -24,7 +24,7 @@ boto3==1.4.8
 path.py==10.3.1
 torch==0.4.1
 joblib==0.9.4
-opencv-python==3.4.0.12
+opencv-python==3.4.2.17
 torchvision==0.2.0
 sk-video==1.1.10
 # git+https://github.com/vitchyr/multiworld.git
